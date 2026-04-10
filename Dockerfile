@@ -6,20 +6,23 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-RUN git clone https://github.com/telemt/telemt.git /app
+# Пинаем конкретный тег чтобы не ловить сломанный main
+RUN git clone --depth=1 --branch 3.3.28 https://github.com/telemt/telemt.git /app
 WORKDIR /app
-RUN cargo build --release
+
+# codegen-units=1 и jobs=1 сильно экономят RAM (Rust компиляция жрёт много)
+ENV RUSTFLAGS="-C codegen-units=1"
+RUN cargo build --release --jobs 1
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
-    gettext-base \
+    openssl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/target/release/telemt /usr/local/bin/telemt
 
-# Entrypoint генерирует config.toml из env переменных и запускает telemt
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
