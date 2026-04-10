@@ -1,13 +1,16 @@
 #!/bin/bash
 set -e
 
-# Дефолтные значения
-SECRET="${SECRET:-$(openssl rand -hex 16)}"
-USERNAME="${USERNAME:-user}"
+SECRET="${SECRET:-e4369939998facee16f16180a9c7070a}"
+USERNAME="${USERNAME:-test_proxy}"
 PORT="${PORT:-443}"
-TLS_DOMAIN="${TLS_DOMAIN:-www.google.com}"
+TLS_DOMAIN="${TLS_DOMAIN:-yandex.ru}"
 LOG_LEVEL="${LOG_LEVEL:-normal}"
 AD_TAG="${AD_TAG:-}"
+
+# Конвертим домен в hex через od (xxd может отсутствовать)
+TLS_DOMAIN_HEX=$(echo -n "$TLS_DOMAIN" | od -A n -t x1 | tr -d ' \n')
+EE_SECRET="ee${SECRET}${TLS_DOMAIN_HEX}"
 
 echo "========================================="
 echo " Telemt MTProxy starting..."
@@ -15,25 +18,15 @@ echo " Port:       $PORT"
 echo " TLS Domain: $TLS_DOMAIN"
 echo " Username:   $USERNAME"
 echo " Secret:     $SECRET"
-echo ""
-echo " Your proxy link:"
-echo " tg://proxy?server=YOUR_HOST&port=$PORT&secret=ee$(echo -n $TLS_DOMAIN | xxd -p)$(echo $SECRET)"
+echo " EE Secret:  $EE_SECRET"
 echo "========================================="
 
-# Генерируем hex из tls_domain для ссылки (ee-префикс = fake TLS режим)
-TLS_DOMAIN_HEX=$(echo -n "$TLS_DOMAIN" | xxd -p | tr -d '\n')
-echo ""
-echo " Secret для Fake TLS (ee): ee${TLS_DOMAIN_HEX}${SECRET}"
-echo "========================================="
-
-# Опциональный ad_tag
 AD_TAG_LINE=""
 if [ -n "$AD_TAG" ]; then
     AD_TAG_LINE="ad_tag = \"$AD_TAG\""
 fi
 
-# Генерируем config.toml
-cat > /config.toml <<EOF
+cat > /config.toml <<TOML
 [general]
 use_middle_proxy = false
 $AD_TAG_LINE
@@ -68,7 +61,7 @@ tls_front_dir = "/data/tlsfront"
 
 [access.users]
 $USERNAME = "$SECRET"
-EOF
+TOML
 
 mkdir -p /data/tlsfront
 
