@@ -7,8 +7,8 @@ PORT="${PORT:-443}"
 TLS_DOMAIN="${TLS_DOMAIN:-yandex.ru}"
 LOG_LEVEL="${LOG_LEVEL:-normal}"
 AD_TAG="${AD_TAG:-}"
+API_TOKEN="${API_TOKEN:-}"
 
-# Конвертим домен в hex через od (xxd может отсутствовать)
 TLS_DOMAIN_HEX=$(echo -n "$TLS_DOMAIN" | od -A n -t x1 | tr -d ' \n')
 EE_SECRET="ee${SECRET}${TLS_DOMAIN_HEX}"
 
@@ -24,6 +24,11 @@ echo "========================================="
 AD_TAG_LINE=""
 if [ -n "$AD_TAG" ]; then
     AD_TAG_LINE="ad_tag = \"$AD_TAG\""
+fi
+
+API_TOKEN_LINE=""
+if [ -n "$API_TOKEN" ]; then
+    API_TOKEN_LINE="token = \"$API_TOKEN\""
 fi
 
 cat > /config.toml <<TOML
@@ -44,11 +49,12 @@ show = "*"
 port = $PORT
 
 [server.api]
-enabled = false
+enabled = true
 listen = "0.0.0.0:9091"
 whitelist = ["0.0.0.0/0"]
-minimal_runtime_enabled = false
-minimal_runtime_cache_ttl_ms = 1000
+$API_TOKEN_LINE
+minimal_runtime_enabled = true
+minimal_runtime_cache_ttl_ms = 5000
 
 [[server.listeners]]
 ip = "0.0.0.0"
